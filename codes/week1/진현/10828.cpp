@@ -17,6 +17,8 @@ int main(void)
     int n;
     cin >> n;
     stack st;
+
+    // STL 사용
     for (int i = 0; i < n; i++)
     {
         string cmd;

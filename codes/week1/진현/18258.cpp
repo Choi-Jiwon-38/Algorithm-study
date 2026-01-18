@@ -19,11 +19,16 @@ int main(void) {
     q.f_idx = 0; q.b_idx = -1;
     q.list = new int[2000000];
 
+    /**
+     * 직접 linear array로 큐를 구현.
+     * 큐의 각 명령어들이 2번째 글자가 고유하므로,
+     * 해당 글자를 기준으로 구분.
+     */
     int t; cin >> t;
     while (t--) {
         string cmd; 
         cin >> cmd;
-
+        
         switch (cmd[1])
         {
         case 'u': // push
