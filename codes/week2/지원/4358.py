@@ -19,4 +19,4 @@ for _ in range(1000000):
 keys = sorted(dict.keys())
 
 for key in keys:
-    print("%s %0.4f"%(key, dict[key] / count * 100))
+    print(f"{key} {(dict[key] / count * 100):.4f}")
