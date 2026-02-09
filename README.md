@@ -2,9 +2,9 @@
 
 ### 참여 인원
 
-| <img width="200" src="https://github.com/AIJeongwon.png"> | <img width="200" src="https://github.com/jinh-636.png"> | <img width="200" src="https://github.com/Choi-Jiwon-38.png"> |
-| --------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ |
-| [박정원](https://github.com/AIJeongwon)                   | [진현](https://github.com/jinh-636)                     | [최지원](https://github.com/Choi-Jiwon-38)                   |
+| <img width="200" src="https://github.com/AIJeongwon.png"> | <img width="200" src="https://github.com/anmincheol-71.png"> | <img width="200" src="https://github.com/jinh-636.png"> | <img width="200" src="https://github.com/Choi-Jiwon-38.png"> |
+| --------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------ |
+| [박정원](https://github.com/AIJeongwon)                   | [안민철](https://github.com/anmincheol-71)                   | [진현](https://github.com/jinh-636)                     | [최지원](https://github.com/Choi-Jiwon-38)                   |
 
 ### 스터디 안내
 
