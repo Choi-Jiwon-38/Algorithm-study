@@ -8,10 +8,7 @@ for i in range(matrixNum):
 
     if i == 0:
         matrixList.append(x)
-        
-    sliceList.append(y)
     matrixList.append(y)
-sliceList.pop()
 
 dp = [[0 for _ in range(matrixNum+1)] for _ in range(matrixNum+1)]
 
