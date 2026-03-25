@@ -47,10 +47,7 @@ inline void check_map() {
     ans = min(ans, z_cnt);
 }
 
-void check_cctv1(int idx, int dir, bool restore) {
-    point &p = cctvs[idx].p;
-    int ny = p.first, nx = p.second, id = cctvs[idx].c_id;
-    int &dy = dv[dir].first, &dx = dv[dir].second;
+inline void check_line(int ny, int nx, int dy, int dx, int id, bool restore) {
     while (1) {
         ny += dy;
         nx += dx;
@@ -71,30 +68,20 @@ void check_cctv1(int idx, int dir, bool restore) {
     }
 }
 
+void check_cctv1(int idx, int dir, bool restore) {
+    point &p = cctvs[idx].p;
+    int ny = p.first, nx = p.second, id = cctvs[idx].c_id;
+    int &dy = dv[dir].first, &dx = dv[dir].second;
+    check_line(ny, nx, dy, dx, id, restore);
+}
+
 void check_cctv2(int idx, int dir, bool restore) {
     point &p = cctvs[idx].p;
     int id = cctvs[idx].c_id;
     for (int k=0; k<=2; k+=2) {
         int ny = p.first, nx = p.second;
         int &dy = dv[(dir + k) % 4].first, &dx = dv[(dir + k) % 4].second;
-        while (1) {
-            ny += dy;
-            nx += dx;
-            if ((0 <= ny && ny < N) && (0 <= nx && nx < M)) {
-                if (board[ny][nx].is_wall) {
-                    break;
-                }
-                else {
-                    if (restore)
-                        board[ny][nx].is_checked.reset(id);
-                    else
-                        board[ny][nx].is_checked.set(id);
-                }
-            }
-            else {
-                break;
-            }
-        }
+        check_line(ny, nx, dy, dx, id, restore);
     }
 }
 
@@ -104,24 +91,7 @@ void check_cctv3(int idx, int dir, bool restore) {
     for (int k=0; k<=1; k++) {
         int ny = p.first, nx = p.second;
         int &dy = dv[(dir + k) % 4].first, &dx = dv[(dir + k) % 4].second;
-        while (1) {
-            ny += dy;
-            nx += dx;
-            if ((0 <= ny && ny < N) && (0 <= nx && nx < M)) {
-                if (board[ny][nx].is_wall) {
-                    break;
-                }
-                else {
-                    if (restore)
-                        board[ny][nx].is_checked.reset(id);
-                    else
-                        board[ny][nx].is_checked.set(id);
-                }
-            }
-            else {
-                break;
-            }
-        }
+        check_line(ny, nx, dy, dx, id, restore);
     }
 }
 
@@ -131,24 +101,7 @@ void check_cctv4(int idx, int dir, bool restore) {
     for (int k=0; k<=2; k++) {
         int ny = p.first, nx = p.second;
         int &dy = dv[(dir + k) % 4].first, &dx = dv[(dir + k) % 4].second;
-        while (1) {
-            ny += dy;
-            nx += dx;
-            if ((0 <= ny && ny < N) && (0 <= nx && nx < M)) {
-                if (board[ny][nx].is_wall) {
-                    break;
-                }
-                else {
-                    if (restore)
-                        board[ny][nx].is_checked.reset(id);
-                    else
-                        board[ny][nx].is_checked.set(id);
-                }
-            }
-            else {
-                break;
-            }
-        }
+        check_line(ny, nx, dy, dx, id, restore);
     }
 }
 
@@ -158,24 +111,7 @@ void check_cctv5(int idx, bool restore) {
     for (int k=0; k<=3; k++) {
         int ny = p.first, nx = p.second;
         int &dy = dv[k].first, &dx = dv[k].second;
-        while (1) {
-            ny += dy;
-            nx += dx;
-            if ((0 <= ny && ny < N) && (0 <= nx && nx < M)) {
-                if (board[ny][nx].is_wall) {
-                    break;
-                }
-                else {
-                    if (restore)
-                        board[ny][nx].is_checked.reset(id);
-                    else
-                        board[ny][nx].is_checked.set(id);
-                }
-            }
-            else {
-                break;
-            }
-        }
+        check_line(ny, nx, dy, dx, id, restore);
     }
 }
 
