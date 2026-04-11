@@ -14,7 +14,6 @@ def check(str_num: str):
     return True
 
 def make(prev_num_str: str):
-    global answer
     if len(prev_num_str) == n:
         print(prev_num_str)
         exit()
