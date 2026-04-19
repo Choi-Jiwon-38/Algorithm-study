@@ -11,7 +11,7 @@ import random
 import base64
 import requests
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 
 GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
 REPO = os.environ.get("GITHUB_REPOSITORY", "Choi-Jiwon-38/Algorithm-study")
@@ -20,8 +20,8 @@ HEADERS = {
     "Accept": "application/vnd.github+json",
 }
 NUM_PROBLEMS = 4
-REVIEWERS = ["Choi-Jiwon-38", "AIJeongwon", "jinh-636"]
-ASSIGNEES = ["Choi-Jiwon-38", "AIJeongwon", "jinh-636"]
+ASSIGNEES = REVIEWERS = ["Choi-Jiwon-38", "AIJeongwon", "jinh-636"]
+
 
 def make_url(slug):
     return f"https://leetcode.com/problems/{slug}/"
@@ -440,14 +440,11 @@ def pr_exists(head):
 
 
 def create_pr(week, branch, problems):
-    today  = datetime.now().strftime("%Y-%m-%d")
-    sunday = (datetime.now() + timedelta(days=(6 - datetime.now().weekday()))).strftime("%Y-%m-%d")
-
     rows = ""
     for i, p in enumerate(problems, 1):
         rows += f"| {i} | [{p['title']}]({make_url(p['slug'])}) |\n"
 
-    body = f"""## 📅 {week}주차 알고리즘 스터디 문제 ({today} ~ {sunday})
+    body = f"""## {week}주차 알고리즘 스터디 문제
 
 > 매주 일요일 스터디 전까지 풀이를 올려주세요! 🚀
 
@@ -465,7 +462,6 @@ codes/week{week}/본인이름/문제제목.py (또는 .cpp, .c)
 ### ✅ 체크리스트
 
 - [ ] 박정원
-- [ ] 안민철
 - [ ] 진현
 - [ ] 최지원
 
@@ -477,7 +473,7 @@ codes/week{week}/본인이름/문제제목.py (또는 .cpp, .c)
         f"https://api.github.com/repos/{REPO}/pulls",
         headers=HEADERS,
         json={
-            "title": f"[Week {week}] 주차별 문제 ({today})",
+            "title": f"[Week {week}] 주차별 문제",
             "body": body,
             "head": branch,
             "base": "main",
@@ -486,10 +482,17 @@ codes/week{week}/본인이름/문제제목.py (또는 .cpp, .c)
     resp.raise_for_status()
     pr = resp.json()
 
+    # Reviewer 지정 (pulls API)
     requests.post(
         f"https://api.github.com/repos/{REPO}/pulls/{pr['number']}/requested_reviewers",
         headers=HEADERS,
-        json={"reviewers": REVIEWERS, "assignees": ASSIGNEES },
+        json={"reviewers": REVIEWERS},
+    )
+    # Assignee 지정 (issues API — PR assignee는 이 엔드포인트로만 가능)
+    requests.post(
+        f"https://api.github.com/repos/{REPO}/issues/{pr['number']}/assignees",
+        headers=HEADERS,
+        json={"assignees": ASSIGNEES},
     )
     return pr
 
