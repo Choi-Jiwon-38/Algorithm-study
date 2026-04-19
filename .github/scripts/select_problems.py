@@ -1,13 +1,14 @@
 """
-주차별 알고리즘 문제 자동 선정 스크립트
-- LeetCode 75 + Top Interview 150 전체 문제 풀에서 선정
-- GitHub Issue의 기존 문제와 중복 방지 (slug/번호 기준)
-- 난이도 균형: Easy 1 / Medium 2 / Hard 1
+주차별 알고리즘 문제 자동 선정 및 PR 생성 스크립트
+- LeetCode 75 + Top Interview 150 풀(Easy/Medium, 189문제)에서 선정
+- 기존 PR 본문을 스캔해 중복 출제 방지
+- Easy 2문제 / Medium 2문제 유형 무관 랜덤 선정
+- week{N} 브랜치 생성 → README.md 커밋 → PR 오픈
 """
 
 import os
-import json
 import random
+import base64
 import requests
 import re
 from datetime import datetime, timedelta
@@ -19,6 +20,7 @@ HEADERS = {
     "Accept": "application/vnd.github+json",
 }
 NUM_PROBLEMS = 4
+REVIEWERS = ["Choi-Jiwon-38", "AIJeongwon", "jinh-636"]
 
 
 def make_url(slug):
@@ -44,13 +46,11 @@ PROBLEM_POOL_RAW = [
     {"id": "58",   "title": "Length of Last Word",                              "slug": "length-of-last-word",                                    "difficulty": "Easy",   "tags": ["String"],                           "source": "TI150"},
     {"id": "66",   "title": "Plus One",                                         "slug": "plus-one",                                               "difficulty": "Easy",   "tags": ["Array", "Math"],                    "source": "TI150"},
     {"id": "67",   "title": "Add Binary",                                       "slug": "add-binary",                                             "difficulty": "Easy",   "tags": ["Bit Manipulation", "String"],       "source": "TI150"},
-    {"id": "68",   "title": "Text Justification",                               "slug": "text-justification",                                     "difficulty": "Hard",   "tags": ["String", "Simulation"],             "source": "TI150"},
     {"id": "80",   "title": "Remove Duplicates from Sorted Array II",           "slug": "remove-duplicates-from-sorted-array-ii",                 "difficulty": "Medium", "tags": ["Array", "Two Pointers"],            "source": "TI150"},
     {"id": "88",   "title": "Merge Sorted Array",                               "slug": "merge-sorted-array",                                     "difficulty": "Easy",   "tags": ["Array", "Two Pointers"],            "source": "TI150"},
     {"id": "121",  "title": "Best Time to Buy and Sell Stock",                  "slug": "best-time-to-buy-and-sell-stock",                        "difficulty": "Easy",   "tags": ["Array", "DP"],                      "source": "TI150"},
     {"id": "122",  "title": "Best Time to Buy and Sell Stock II",               "slug": "best-time-to-buy-and-sell-stock-ii",                     "difficulty": "Medium", "tags": ["Array", "Greedy"],                  "source": "TI150"},
     {"id": "134",  "title": "Gas Station",                                      "slug": "gas-station",                                            "difficulty": "Medium", "tags": ["Array", "Greedy"],                  "source": "TI150"},
-    {"id": "135",  "title": "Candy",                                            "slug": "candy",                                                  "difficulty": "Hard",   "tags": ["Array", "Greedy"],                  "source": "TI150"},
     {"id": "151",  "title": "Reverse Words in a String",                        "slug": "reverse-words-in-a-string",                              "difficulty": "Medium", "tags": ["String", "Two Pointers"],           "source": "both"},
     {"id": "169",  "title": "Majority Element",                                 "slug": "majority-element",                                       "difficulty": "Easy",   "tags": ["Array", "Hash Table"],              "source": "TI150"},
     {"id": "189",  "title": "Rotate Array",                                     "slug": "rotate-array",                                           "difficulty": "Medium", "tags": ["Array"],                            "source": "TI150"},
@@ -68,15 +68,12 @@ PROBLEM_POOL_RAW = [
     # ── Two Pointers ────────────────────────────────────────────────────────────
     {"id": "11",   "title": "Container With Most Water",                        "slug": "container-with-most-water",                              "difficulty": "Medium", "tags": ["Array", "Two Pointers"],            "source": "both"},
     {"id": "15",   "title": "3Sum",                                             "slug": "3sum",                                                   "difficulty": "Medium", "tags": ["Array", "Two Pointers"],            "source": "TI150"},
-    {"id": "42",   "title": "Trapping Rain Water",                              "slug": "trapping-rain-water",                                    "difficulty": "Hard",   "tags": ["Array", "Two Pointers"],            "source": "TI150"},
     {"id": "125",  "title": "Valid Palindrome",                                 "slug": "valid-palindrome",                                       "difficulty": "Easy",   "tags": ["String", "Two Pointers"],           "source": "TI150"},
     {"id": "167",  "title": "Two Sum II - Input Array Is Sorted",               "slug": "two-sum-ii-input-array-is-sorted",                       "difficulty": "Medium", "tags": ["Array", "Two Pointers"],            "source": "TI150"},
     {"id": "283",  "title": "Move Zeroes",                                      "slug": "move-zeroes",                                            "difficulty": "Easy",   "tags": ["Array", "Two Pointers"],            "source": "LC75"},
     {"id": "1679", "title": "Max Number of K-Sum Pairs",                        "slug": "max-number-of-k-sum-pairs",                              "difficulty": "Medium", "tags": ["Array", "Hash Table"],              "source": "LC75"},
     # ── Sliding Window ──────────────────────────────────────────────────────────
     {"id": "3",    "title": "Longest Substring Without Repeating Characters",   "slug": "longest-substring-without-repeating-characters",         "difficulty": "Medium", "tags": ["String", "Sliding Window"],         "source": "TI150"},
-    {"id": "30",   "title": "Substring with Concatenation of All Words",        "slug": "substring-with-concatenation-of-all-words",              "difficulty": "Hard",   "tags": ["String", "Sliding Window"],         "source": "TI150"},
-    {"id": "76",   "title": "Minimum Window Substring",                         "slug": "minimum-window-substring",                               "difficulty": "Hard",   "tags": ["String", "Sliding Window"],         "source": "TI150"},
     {"id": "209",  "title": "Minimum Size Subarray Sum",                        "slug": "minimum-size-subarray-sum",                              "difficulty": "Medium", "tags": ["Array", "Sliding Window"],          "source": "TI150"},
     {"id": "643",  "title": "Maximum Average Subarray I",                       "slug": "maximum-average-subarray-i",                             "difficulty": "Easy",   "tags": ["Array", "Sliding Window"],          "source": "LC75"},
     {"id": "1004", "title": "Max Consecutive Ones III",                         "slug": "max-consecutive-ones-iii",                               "difficulty": "Medium", "tags": ["Array", "Sliding Window"],          "source": "LC75"},
@@ -103,7 +100,6 @@ PROBLEM_POOL_RAW = [
     {"id": "71",   "title": "Simplify Path",                                    "slug": "simplify-path",                                          "difficulty": "Medium", "tags": ["Stack", "String"],                  "source": "TI150"},
     {"id": "150",  "title": "Evaluate Reverse Polish Notation",                 "slug": "evaluate-reverse-polish-notation",                       "difficulty": "Medium", "tags": ["Stack", "Array"],                   "source": "TI150"},
     {"id": "155",  "title": "Min Stack",                                        "slug": "min-stack",                                              "difficulty": "Medium", "tags": ["Stack", "Design"],                  "source": "TI150"},
-    {"id": "224",  "title": "Basic Calculator",                                 "slug": "basic-calculator",                                       "difficulty": "Hard",   "tags": ["Stack", "Math"],                    "source": "TI150"},
     {"id": "394",  "title": "Decode String",                                    "slug": "decode-string",                                          "difficulty": "Medium", "tags": ["Stack", "String"],                  "source": "both"},
     {"id": "735",  "title": "Asteroid Collision",                               "slug": "asteroid-collision",                                     "difficulty": "Medium", "tags": ["Stack", "Array"],                   "source": "LC75"},
     {"id": "2390", "title": "Removing Stars From a String",                     "slug": "removing-stars-from-a-string",                           "difficulty": "Medium", "tags": ["Stack", "String"],                  "source": "LC75"},
@@ -114,8 +110,6 @@ PROBLEM_POOL_RAW = [
     {"id": "2",    "title": "Add Two Numbers",                                  "slug": "add-two-numbers",                                        "difficulty": "Medium", "tags": ["Linked List", "Math"],              "source": "TI150"},
     {"id": "19",   "title": "Remove Nth Node From End of List",                 "slug": "remove-nth-node-from-end-of-list",                       "difficulty": "Medium", "tags": ["Linked List", "Two Pointers"],      "source": "TI150"},
     {"id": "21",   "title": "Merge Two Sorted Lists",                           "slug": "merge-two-sorted-lists",                                 "difficulty": "Easy",   "tags": ["Linked List"],                      "source": "TI150"},
-    {"id": "23",   "title": "Merge k Sorted Lists",                             "slug": "merge-k-sorted-lists",                                   "difficulty": "Hard",   "tags": ["Linked List", "Heap"],              "source": "TI150"},
-    {"id": "25",   "title": "Reverse Nodes in k-Group",                         "slug": "reverse-nodes-in-k-group",                               "difficulty": "Hard",   "tags": ["Linked List"],                      "source": "TI150"},
     {"id": "61",   "title": "Rotate List",                                      "slug": "rotate-list",                                            "difficulty": "Medium", "tags": ["Linked List", "Two Pointers"],      "source": "TI150"},
     {"id": "82",   "title": "Remove Duplicates from Sorted List II",            "slug": "remove-duplicates-from-sorted-list-ii",                  "difficulty": "Medium", "tags": ["Linked List"],                      "source": "TI150"},
     {"id": "86",   "title": "Partition List",                                   "slug": "partition-list",                                         "difficulty": "Medium", "tags": ["Linked List", "Two Pointers"],      "source": "TI150"},
@@ -140,7 +134,6 @@ PROBLEM_POOL_RAW = [
     {"id": "112",  "title": "Path Sum",                                         "slug": "path-sum",                                               "difficulty": "Easy",   "tags": ["Tree", "DFS"],                      "source": "TI150"},
     {"id": "114",  "title": "Flatten Binary Tree to Linked List",               "slug": "flatten-binary-tree-to-linked-list",                     "difficulty": "Medium", "tags": ["Tree", "DFS"],                      "source": "TI150"},
     {"id": "117",  "title": "Populating Next Right Pointers in Each Node II",   "slug": "populating-next-right-pointers-in-each-node-ii",         "difficulty": "Medium", "tags": ["Tree", "BFS"],                      "source": "TI150"},
-    {"id": "124",  "title": "Binary Tree Maximum Path Sum",                     "slug": "binary-tree-maximum-path-sum",                           "difficulty": "Hard",   "tags": ["Tree", "DFS", "DP"],                "source": "TI150"},
     {"id": "129",  "title": "Sum Root to Leaf Numbers",                         "slug": "sum-root-to-leaf-numbers",                               "difficulty": "Medium", "tags": ["Tree", "DFS"],                      "source": "TI150"},
     {"id": "173",  "title": "Binary Search Tree Iterator",                      "slug": "binary-search-tree-iterator",                            "difficulty": "Medium", "tags": ["Tree", "Stack", "Design"],          "source": "TI150"},
     {"id": "199",  "title": "Binary Tree Right Side View",                      "slug": "binary-tree-right-side-view",                            "difficulty": "Medium", "tags": ["Tree", "BFS"],                      "source": "both"},
@@ -157,7 +150,6 @@ PROBLEM_POOL_RAW = [
     {"id": "1372", "title": "Longest ZigZag Path in a Binary Tree",             "slug": "longest-zigzag-path-in-a-binary-tree",                   "difficulty": "Medium", "tags": ["Tree", "DFS", "DP"],                "source": "LC75"},
     {"id": "1448", "title": "Count Good Nodes in Binary Tree",                  "slug": "count-good-nodes-in-binary-tree",                        "difficulty": "Medium", "tags": ["Tree", "DFS"],                      "source": "LC75"},
     # ── Graph ───────────────────────────────────────────────────────────────────
-    {"id": "127",  "title": "Word Ladder",                                      "slug": "word-ladder",                                            "difficulty": "Hard",   "tags": ["Graph", "BFS"],                     "source": "TI150"},
     {"id": "130",  "title": "Surrounded Regions",                               "slug": "surrounded-regions",                                     "difficulty": "Medium", "tags": ["Graph", "DFS"],                     "source": "TI150"},
     {"id": "133",  "title": "Clone Graph",                                      "slug": "clone-graph",                                            "difficulty": "Medium", "tags": ["Graph", "DFS"],                     "source": "TI150"},
     {"id": "200",  "title": "Number of Islands",                                "slug": "number-of-islands",                                      "difficulty": "Medium", "tags": ["Graph", "DFS", "BFS"],              "source": "TI150"},
@@ -173,14 +165,11 @@ PROBLEM_POOL_RAW = [
     {"id": "1926", "title": "Nearest Exit from Entrance in Maze",               "slug": "nearest-exit-from-entrance-in-maze",                     "difficulty": "Medium", "tags": ["Graph", "BFS"],                     "source": "LC75"},
     # ── Heap / Priority Queue ───────────────────────────────────────────────────
     {"id": "215",  "title": "Kth Largest Element in an Array",                  "slug": "kth-largest-element-in-an-array",                        "difficulty": "Medium", "tags": ["Heap", "Array"],                    "source": "both"},
-    {"id": "295",  "title": "Find Median from Data Stream",                     "slug": "find-median-from-data-stream",                           "difficulty": "Hard",   "tags": ["Heap", "Design"],                   "source": "TI150"},
     {"id": "373",  "title": "Find K Pairs with Smallest Sums",                  "slug": "find-k-pairs-with-smallest-sums",                        "difficulty": "Medium", "tags": ["Heap", "Array"],                    "source": "TI150"},
-    {"id": "502",  "title": "IPO",                                              "slug": "ipo",                                                    "difficulty": "Hard",   "tags": ["Heap", "Greedy"],                   "source": "TI150"},
     {"id": "2336", "title": "Smallest Number in Infinite Set",                  "slug": "smallest-number-in-infinite-set",                        "difficulty": "Medium", "tags": ["Heap", "Design"],                   "source": "LC75"},
     {"id": "2462", "title": "Total Cost to Hire K Workers",                     "slug": "total-cost-to-hire-k-workers",                           "difficulty": "Medium", "tags": ["Heap", "Two Pointers"],             "source": "LC75"},
     {"id": "2542", "title": "Maximum Subsequence Score",                        "slug": "maximum-subsequence-score",                              "difficulty": "Medium", "tags": ["Heap", "Greedy"],                   "source": "LC75"},
     # ── Binary Search ───────────────────────────────────────────────────────────
-    {"id": "4",    "title": "Median of Two Sorted Arrays",                      "slug": "median-of-two-sorted-arrays",                            "difficulty": "Hard",   "tags": ["Binary Search", "Array"],           "source": "TI150"},
     {"id": "33",   "title": "Search in Rotated Sorted Array",                   "slug": "search-in-rotated-sorted-array",                         "difficulty": "Medium", "tags": ["Binary Search", "Array"],           "source": "TI150"},
     {"id": "34",   "title": "Find First and Last Position of Element in Sorted Array", "slug": "find-first-and-last-position-of-element-in-sorted-array", "difficulty": "Medium", "tags": ["Binary Search", "Array"],   "source": "TI150"},
     {"id": "35",   "title": "Search Insert Position",                           "slug": "search-insert-position",                                 "difficulty": "Easy",   "tags": ["Binary Search", "Array"],           "source": "TI150"},
@@ -194,14 +183,12 @@ PROBLEM_POOL_RAW = [
     # ── Trie ────────────────────────────────────────────────────────────────────
     {"id": "208",  "title": "Implement Trie (Prefix Tree)",                     "slug": "implement-trie-prefix-tree",                             "difficulty": "Medium", "tags": ["Trie", "Design"],                   "source": "both"},
     {"id": "211",  "title": "Design Add and Search Words Data Structure",       "slug": "design-add-and-search-words-data-structure",             "difficulty": "Medium", "tags": ["Trie", "Design"],                   "source": "TI150"},
-    {"id": "212",  "title": "Word Search II",                                   "slug": "word-search-ii",                                         "difficulty": "Hard",   "tags": ["Trie", "Backtracking"],             "source": "TI150"},
     {"id": "1268", "title": "Search Suggestions System",                        "slug": "search-suggestions-system",                              "difficulty": "Medium", "tags": ["Trie", "Binary Search"],            "source": "LC75"},
     # ── Backtracking ────────────────────────────────────────────────────────────
     {"id": "17",   "title": "Letter Combinations of a Phone Number",            "slug": "letter-combinations-of-a-phone-number",                  "difficulty": "Medium", "tags": ["Backtracking", "String"],           "source": "both"},
     {"id": "22",   "title": "Generate Parentheses",                             "slug": "generate-parentheses",                                   "difficulty": "Medium", "tags": ["Backtracking", "String"],           "source": "TI150"},
     {"id": "39",   "title": "Combination Sum",                                  "slug": "combination-sum",                                        "difficulty": "Medium", "tags": ["Backtracking", "Array"],            "source": "TI150"},
     {"id": "46",   "title": "Permutations",                                     "slug": "permutations",                                           "difficulty": "Medium", "tags": ["Backtracking", "Array"],            "source": "TI150"},
-    {"id": "52",   "title": "N-Queens II",                                      "slug": "n-queens-ii",                                            "difficulty": "Hard",   "tags": ["Backtracking"],                     "source": "TI150"},
     {"id": "77",   "title": "Combinations",                                     "slug": "combinations",                                           "difficulty": "Medium", "tags": ["Backtracking"],                     "source": "TI150"},
     {"id": "79",   "title": "Word Search",                                      "slug": "word-search",                                            "difficulty": "Medium", "tags": ["Backtracking", "Matrix"],           "source": "TI150"},
     {"id": "216",  "title": "Combination Sum III",                              "slug": "combination-sum-iii",                                    "difficulty": "Medium", "tags": ["Backtracking", "Array"],            "source": "LC75"},
@@ -215,9 +202,7 @@ PROBLEM_POOL_RAW = [
     {"id": "72",   "title": "Edit Distance",                                    "slug": "edit-distance",                                          "difficulty": "Medium", "tags": ["DP", "String"],                     "source": "both"},
     {"id": "97",   "title": "Interleaving String",                              "slug": "interleaving-string",                                    "difficulty": "Medium", "tags": ["DP", "String"],                     "source": "TI150"},
     {"id": "120",  "title": "Triangle",                                         "slug": "triangle",                                               "difficulty": "Medium", "tags": ["DP", "Array"],                      "source": "TI150"},
-    {"id": "123",  "title": "Best Time to Buy and Sell Stock III",              "slug": "best-time-to-buy-and-sell-stock-iii",                    "difficulty": "Hard",   "tags": ["DP", "Array"],                      "source": "TI150"},
     {"id": "139",  "title": "Word Break",                                       "slug": "word-break",                                             "difficulty": "Medium", "tags": ["DP", "Hash Table"],                 "source": "TI150"},
-    {"id": "188",  "title": "Best Time to Buy and Sell Stock IV",               "slug": "best-time-to-buy-and-sell-stock-iv",                     "difficulty": "Hard",   "tags": ["DP", "Array"],                      "source": "TI150"},
     {"id": "198",  "title": "House Robber",                                     "slug": "house-robber",                                           "difficulty": "Medium", "tags": ["DP", "Array"],                      "source": "both"},
     {"id": "300",  "title": "Longest Increasing Subsequence",                   "slug": "longest-increasing-subsequence",                         "difficulty": "Medium", "tags": ["DP", "Array"],                      "source": "TI150"},
     {"id": "322",  "title": "Coin Change",                                      "slug": "coin-change",                                            "difficulty": "Medium", "tags": ["DP", "Array"],                      "source": "TI150"},
@@ -238,7 +223,6 @@ PROBLEM_POOL_RAW = [
     # ── Math ────────────────────────────────────────────────────────────────────
     {"id": "9",    "title": "Palindrome Number",                                "slug": "palindrome-number",                                      "difficulty": "Easy",   "tags": ["Math"],                             "source": "TI150"},
     {"id": "50",   "title": "Pow(x, n)",                                        "slug": "powx-n",                                                 "difficulty": "Medium", "tags": ["Math", "Divide & Conquer"],         "source": "TI150"},
-    {"id": "149",  "title": "Max Points on a Line",                             "slug": "max-points-on-a-line",                                   "difficulty": "Hard",   "tags": ["Math", "Geometry"],                 "source": "TI150"},
     {"id": "172",  "title": "Factorial Trailing Zeroes",                        "slug": "factorial-trailing-zeroes",                              "difficulty": "Medium", "tags": ["Math"],                             "source": "TI150"},
     # ── Matrix ──────────────────────────────────────────────────────────────────
     {"id": "36",   "title": "Valid Sudoku",                                     "slug": "valid-sudoku",                                           "difficulty": "Medium", "tags": ["Matrix", "Hash Table"],             "source": "TI150"},
@@ -290,40 +274,47 @@ def get_current_week_number():
 
 
 def get_used_problem_ids():
-    """기존 Issue 본문에서 이미 출제된 LeetCode slug → id 매핑으로 추출"""
-    url = f"https://api.github.com/repos/{REPO}/issues?state=all&labels=weekly-problem&per_page=100"
-    resp = requests.get(url, headers=HEADERS)
+    """기존 PR 본문에서 이미 출제된 LeetCode slug → id 매핑으로 추출"""
     used = set()
-    if resp.status_code != 200:
-        return used
     slug_to_id = {p["slug"]: p["id"] for p in PROBLEM_POOL}
-    for issue in resp.json():
-        body = issue.get("body", "") or ""
-        for slug in re.findall(r"leetcode\.com/problems/([\w-]+)/", body):
-            if slug in slug_to_id:
-                used.add(slug_to_id[slug])
+    page = 1
+    while True:
+        resp = requests.get(
+            f"https://api.github.com/repos/{REPO}/pulls?state=all&per_page=100&page={page}",
+            headers=HEADERS,
+        )
+        if resp.status_code != 200 or not resp.json():
+            break
+        for pr in resp.json():
+            body = pr.get("body", "") or ""
+            for slug in re.findall(r"leetcode\.com/problems/([\w-]+)/", body):
+                if slug in slug_to_id:
+                    used.add(slug_to_id[slug])
+        if "next" not in resp.links:
+            break
+        page += 1
     return used
 
 
 def select_problems(used_ids):
-    # Hard 제외
-    available = [p for p in PROBLEM_POOL if p["id"] not in used_ids and p["difficulty"] != "Hard"]
+    """유형 상관없이 Easy 2문제, Medium 2문제를 랜덤 선정"""
+    available = [p for p in PROBLEM_POOL if p["id"] not in used_ids]
     if len(available) < NUM_PROBLEMS:
         print("⚠️  전체 풀 소진 — 초기화 후 재선정")
-        available = [p for p in PROBLEM_POOL if p["difficulty"] != "Hard"]
+        available = list(PROBLEM_POOL)
 
     easy   = [p for p in available if p["difficulty"] == "Easy"]
     medium = [p for p in available if p["difficulty"] == "Medium"]
 
     selected = []
-    # Easy 2문제
+    # Easy 2문제 랜덤
     if len(easy) >= 2:    selected += random.sample(easy,   2)
     elif easy:            selected += easy
-    # Medium 2문제
+    # Medium 2문제 랜덤
     if len(medium) >= 2:  selected += random.sample(medium, 2)
     elif medium:          selected += medium
 
-    # 부족한 경우 나머지로 채우기
+    # 풀이 부족한 경우 나머지로 채우기
     remaining = [p for p in available if p not in selected]
     while len(selected) < NUM_PROBLEMS and remaining:
         pick = random.choice(remaining)
@@ -333,16 +324,122 @@ def select_problems(used_ids):
     return selected[:NUM_PROBLEMS]
 
 
-def ensure_label():
-    label_url = f"https://api.github.com/repos/{REPO}/labels"
-    existing = requests.get(label_url, headers=HEADERS).json()
-    if not any(l.get("name") == "weekly-problem" for l in existing if isinstance(l, dict)):
-        requests.post(label_url, headers=HEADERS, json={
-            "name": "weekly-problem", "color": "0075ca", "description": "주차별 문제 이슈"
-        })
+# ── 브랜치 / README / PR ────────────────────────────────────────────────────
+
+def get_week_numbers_from_branches():
+    """열려있는 브랜치에서 week* 번호 목록 반환"""
+    weeks = []
+    page = 1
+    while True:
+        resp = requests.get(
+            f"https://api.github.com/repos/{REPO}/branches?per_page=100&page={page}",
+            headers=HEADERS,
+        )
+        if resp.status_code != 200 or not resp.json():
+            break
+        for b in resp.json():
+            m = re.match(r"week(\d+)$", b["name"])
+            if m:
+                weeks.append(int(m.group(1)))
+        if "next" not in resp.links:
+            break
+        page += 1
+    return weeks
 
 
-def create_issue(week, problems):
+def get_week_numbers_from_main():
+    """main 브랜치의 codes/ 디렉토리에서 week* 번호 목록 반환"""
+    weeks = []
+    resp = requests.get(
+        f"https://api.github.com/repos/{REPO}/contents/codes",
+        headers=HEADERS,
+    )
+    if resp.status_code != 200:
+        return weeks
+    for item in resp.json():
+        if item["type"] == "dir":
+            m = re.match(r"week(\d+)$", item["name"])
+            if m:
+                weeks.append(int(m.group(1)))
+    return weeks
+
+
+def get_next_week_number():
+    """
+    1순위: 열려있는 브랜치의 week* 최댓값 + 1
+    2순위: 없으면 main의 codes/week* 디렉토리 최댓값 + 1
+    """
+    weeks = get_week_numbers_from_branches()
+    if not weeks:
+        print("ℹ️  열린 week 브랜치 없음 → main 디렉토리에서 주차 감지")
+        weeks = get_week_numbers_from_main()
+    return max(weeks) + 1 if weeks else 14
+
+
+def get_main_sha():
+    resp = requests.get(
+        f"https://api.github.com/repos/{REPO}/git/ref/heads/main",
+        headers=HEADERS,
+    )
+    resp.raise_for_status()
+    return resp.json()["object"]["sha"]
+
+
+def branch_exists(branch):
+    return requests.get(
+        f"https://api.github.com/repos/{REPO}/git/ref/heads/{branch}",
+        headers=HEADERS,
+    ).status_code == 200
+
+
+def create_branch(branch, sha):
+    requests.post(
+        f"https://api.github.com/repos/{REPO}/git/refs",
+        headers=HEADERS,
+        json={"ref": f"refs/heads/{branch}", "sha": sha},
+    ).raise_for_status()
+
+
+def get_file_sha(path, branch):
+    resp = requests.get(
+        f"https://api.github.com/repos/{REPO}/contents/{path}?ref={branch}",
+        headers=HEADERS,
+    )
+    return resp.json().get("sha") if resp.status_code == 200 else None
+
+
+def commit_readme(week, branch, problems):
+    lines = [f"# {week}주차 알고리즘 문항\n"]
+    for p in problems:
+        lines.append(f"* [{p['title']}]({make_url(p['slug'])})")
+    content = "\n".join(lines) + "\n"
+
+    path = f"codes/week{week}/README.md"
+    payload = {
+        "message": f"chore: [Week {week}] README 추가",
+        "content": base64.b64encode(content.encode()).decode(),
+        "branch": branch,
+    }
+    existing_sha = get_file_sha(path, branch)
+    if existing_sha:
+        payload["sha"] = existing_sha
+    requests.put(
+        f"https://api.github.com/repos/{REPO}/contents/{path}",
+        headers=HEADERS,
+        json=payload,
+    ).raise_for_status()
+    return path
+
+
+def pr_exists(head):
+    resp = requests.get(
+        f"https://api.github.com/repos/{REPO}/pulls?state=open&head={REPO.split('/')[0]}:{head}",
+        headers=HEADERS,
+    )
+    return resp.status_code == 200 and len(resp.json()) > 0
+
+
+def create_pr(week, branch, problems):
     today  = datetime.now().strftime("%Y-%m-%d")
     sunday = (datetime.now() + timedelta(days=(6 - datetime.now().weekday()))).strftime("%Y-%m-%d")
 
@@ -362,7 +459,7 @@ def create_issue(week, problems):
 ### 📁 풀이 파일 경로
 
 ```
-codes/week{week:02d}/본인이름/문제제목.py (또는 .cpp, .c)
+codes/week{week}/본인이름/문제제목.py (또는 .cpp, .c)
 ```
 
 ### ✅ 체크리스트
@@ -373,39 +470,67 @@ codes/week{week:02d}/본인이름/문제제목.py (또는 .cpp, .c)
 - [ ] 최지원
 
 ---
-*이 이슈는 GitHub Actions에 의해 자동 생성되었습니다.*
+*이 PR은 GitHub Actions에 의해 자동 생성되었습니다.*
 """
 
-    ensure_label()
     resp = requests.post(
-        f"https://api.github.com/repos/{REPO}/issues",
+        f"https://api.github.com/repos/{REPO}/pulls",
         headers=HEADERS,
-        json={"title": f"[Week {week:02d}] 주차별 문제 ({today})", "body": body, "labels": ["weekly-problem"]},
+        json={
+            "title": f"[Week {week}] 주차별 문제 ({today})",
+            "body": body,
+            "head": branch,
+            "base": "main",
+        },
     )
     resp.raise_for_status()
-    return resp.json()
+    pr = resp.json()
+
+    requests.post(
+        f"https://api.github.com/repos/{REPO}/pulls/{pr['number']}/requested_reviewers",
+        headers=HEADERS,
+        json={"reviewers": REVIEWERS},
+    )
+    return pr
 
 
 def main():
-    print(f"📚 문제 풀 크기: {len(PROBLEM_POOL)}문제 (LC75 + TI150 중복제거)")
-    week = get_current_week_number()
-    print(f"📅 {week}주차")
+    print(f"📚 문제 풀 크기: {len(PROBLEM_POOL)}문제 (LC75 + TI150, Easy/Medium)")
 
+    # ── 1. 주차 결정 ───────────────────────────────────────────────────────────
+    week = get_next_week_number()
+    branch = f"week{week}"
+    print(f"📅 {week}주차 / 브랜치: {branch}")
+
+    # ── 2. 중복 방지: 기존 PR에서 출제된 문제 조회 ────────────────────────────
     used_ids = get_used_problem_ids()
     print(f"📖 이미 출제된 문제: {len(used_ids)}개")
 
+    # ── 3. 문제 선정 ───────────────────────────────────────────────────────────
     problems = select_problems(used_ids)
     print("🎲 선정된 문제:")
     for p in problems:
         print(f"   [{p['difficulty']:6s}] #{p['id']:4s} {p['title']} ({p['source']})")
 
-    issue = create_issue(week, problems)
-    print(f"✅ Issue 생성: {issue['html_url']}")
+    # ── 4. 브랜치 생성 ─────────────────────────────────────────────────────────
+    if branch_exists(branch):
+        print(f"⚠️  브랜치 이미 존재, 스킵")
+    else:
+        create_branch(branch, get_main_sha())
+        print(f"✅ 브랜치 생성 완료")
 
-    with open("problems.json", "w", encoding="utf-8") as f:
-        json.dump({"week": week, "problems": problems, "issue_number": issue["number"]},
-                  f, ensure_ascii=False, indent=2)
-    print("💾 problems.json 저장 완료")
+    # ── 5. README 커밋 ─────────────────────────────────────────────────────────
+    readme_path = commit_readme(week, branch, problems)
+    print(f"📄 {readme_path} 커밋 완료")
+
+    # ── 6. PR 생성 ─────────────────────────────────────────────────────────────
+    if pr_exists(branch):
+        print(f"⚠️  PR 이미 존재, 스킵")
+    else:
+        pr = create_pr(week, branch, problems)
+        print(f"🚀 PR 생성 완료: {pr['html_url']}")
+
+    print("\n🎉 전체 완료!")
 
 
 if __name__ == "__main__":
