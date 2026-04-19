@@ -7,33 +7,21 @@ on:
 
   # 수동 실행 (테스트 & 긴급 재실행용)
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: "Dry run (Issue/PR 실제 생성 안 함)"
-        required: false
-        default: "false"
-        type: choice
-        options:
-          - "false"
-          - "true"
+
+# 403 에러 방지: PR 생성에 필요한 권한 명시
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   weekly-automation:
     name: 문제 선정 & PR 생성
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # 브랜치 & 파일 생성
-      issues: write # Issue 생성
-      pull-requests: write # PR 생성
 
     steps:
-      # ── 1. 코드 체크아웃 ──────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # 전체 히스토리 (주차 계산에 필요)
 
-      # ── 2. Python 설정 ────────────────────────────────────────────────────────
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -42,27 +30,8 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      # ── 3. 문제 선정 & Issue 생성 ─────────────────────────────────────────────
-      - name: Select problems & create Issue
+      - name: Select problems & create PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: python .github/scripts/select_problems.py
-
-      # ── 4. 멤버별 브랜치 & PR 생성 ───────────────────────────────────────────
-      - name: Create member branches & PRs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-        run: python .github/scripts/create_pr.py
-
-      # ── 5. 결과 아티팩트 저장 ─────────────────────────────────────────────────
-      - name: Upload problems.json as artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: weekly-problems-${{ github.run_number }}
-          path: problems.json
-          retention-days: 30
