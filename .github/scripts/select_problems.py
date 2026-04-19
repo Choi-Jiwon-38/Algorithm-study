@@ -21,7 +21,7 @@ HEADERS = {
 }
 NUM_PROBLEMS = 4
 REVIEWERS = ["Choi-Jiwon-38", "AIJeongwon", "jinh-636"]
-
+ASSIGNEES = ["Choi-Jiwon-38", "AIJeongwon", "jinh-636"]
 
 def make_url(slug):
     return f"https://leetcode.com/problems/{slug}/"
@@ -489,7 +489,7 @@ codes/week{week}/본인이름/문제제목.py (또는 .cpp, .c)
     requests.post(
         f"https://api.github.com/repos/{REPO}/pulls/{pr['number']}/requested_reviewers",
         headers=HEADERS,
-        json={"reviewers": REVIEWERS},
+        json={"reviewers": REVIEWERS, "assignees": ASSIGNEES },
     )
     return pr
 
